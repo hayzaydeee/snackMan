@@ -435,6 +435,7 @@ function startGame() {
     let newRow = playerRow;
     let newCol = playerCol;
 
+    // Determine movement direction based on key presses
     if (downPressed) {
       newRow++;
       playerMouth.classList = "down";
@@ -561,17 +562,30 @@ function startGame() {
       player.style.margin = "0";  // Remove any margin
       player.style.zIndex = "10"; // Make player appear above other elements
     } else {
-      // WALL COLLISION - MODIFIED
-      // Instead of ending the game, just add a simple visual feedback and do nothing
-
-      // Optional: Add a small visual feedback (slight shake)
-      player.classList.add("bump");
-      setTimeout(() => {
-        player.classList.remove("bump");
-      }, 100);
+      // Skip if game is already over
+      if (gameOver) return;
       
-      // IMPORTANT: Do NOT set gameOver flag or clear intervals!
-      // Do NOT stop player movement and game progress
+      // Player hit a wall - show animation and end game
+      player.classList.add("hit");
+      gameOver = true;
+
+      // Stop all game loops
+      clearInterval(gameInterval);
+      clearInterval(enemyInterval);
+
+      // Stop music
+      stopMusic();
+
+      // Wait a moment to show the hit animation
+      setTimeout(() => {
+        // Ask to restart
+        if (confirm("You hit a wall! Restart current level?")) {
+          resetCurrentLevel();
+        } else {
+          // Player chose not to restart, save their score
+          saveScore(score);
+        }
+      }, 500);
     }
   }, 200);
 

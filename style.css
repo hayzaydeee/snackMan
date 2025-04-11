@@ -230,3 +230,16 @@ button:nth-child(4) { grid-area: downArrow; }
 .hit {
     animation: hitAnimation 1.5s ease-in-out;
 }
+
+/* Add to your CSS file */
+@keyframes bump {
+    0% { transform: translate(0, 0); }
+    25% { transform: translate(-2px, -2px); }
+    50% { transform: translate(2px, 2px); }
+    75% { transform: translate(-2px, 2px); }
+    100% { transform: translate(0, 0); }
+  }
+  
+  .bump {
+    animation: bump 0.1s ease-in-out;
+  }

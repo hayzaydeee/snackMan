@@ -1304,22 +1304,6 @@ function updateLeaderboard() {
     li.textContent = `${nameWithDots}${entry.score}`;
     leaderboardOl.appendChild(li);
   });
-  
-  // If there are fewer than 5 entries, fill with placeholder entries
-  const placeholders = [
-    {name: "Chris", score: 100},
-    {name: "Mark", score: 75},
-    {name: "Tom", score: 50},
-    {name: "John", score: 45},
-    {name: "John2", score: 40}
-  ];
-  
-  for (let i = leaderboard.length; i < 5; i++) {
-    const li = document.createElement('li');
-    const nameWithDots = placeholders[i].name.padEnd(10, '.'); // Add dots after name
-    li.textContent = `${nameWithDots}${placeholders[i].score}`;
-    leaderboardOl.appendChild(li);
-  }
 }
 
 // Call this when the page loads to initialize the leaderboard

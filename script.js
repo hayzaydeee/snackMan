@@ -4,6 +4,7 @@ let leftPressed = false;
 let rightPressed = false;
 
 let gameOver = false; // game state
+let gamePaused = false; // track pause state
 
 let currentLevel = 1;
 let pointsCollected = 0;
@@ -26,8 +27,6 @@ function generateRandomMaze(level) {
   // Calculate enemy count - increases every 2 levels
   const enemyCount = Math.ceil(level / 2);
   
-  // Create different maze layouts based on level
-  // We'll create 3 different layouts that cycle as levels increase
   let baseLayout;
   
   switch ((level - 1) % 3) {
@@ -131,7 +130,7 @@ function generateRandomMaze(level) {
       // Remove this position from available free spaces
       freeSpaces.splice(randomIndex, 1);
       
-      // IMPORTANT FIX: Decrease the total points counter since this space is now an enemy
+      // Decrease the total points counter since this space is now an enemy
       totalPoints--;
     }
   }
@@ -178,7 +177,7 @@ function stopMusic() {
   }
 }
 
-// Add a function to toggle mute
+// toggle mute
 function toggleMute() {
   musicMuted = !musicMuted;
   
@@ -193,7 +192,7 @@ function toggleMute() {
   }
 }
 
-// Add this at the end of your script to create the mute button
+// mute button creation
 function createMuteButton() {
   const muteButton = document.createElement('button');
   muteButton.id = 'muteButton';
@@ -214,16 +213,81 @@ function createMuteButton() {
   document.body.appendChild(muteButton);
 }
 
+// pause button creation
+function createPauseButton() {
+  const pauseButton = document.createElement('button');
+  pauseButton.id = 'pauseButton';
+  pauseButton.textContent = '⏸️';
+  pauseButton.style.position = 'absolute';
+  pauseButton.style.top = '10px';
+  pauseButton.style.left = '70px'; // Position it next to the mute button
+  pauseButton.style.zIndex = '100';
+  pauseButton.style.fontSize = '24px';
+  pauseButton.style.padding = '5px 10px';
+  pauseButton.style.backgroundColor = 'rgba(0,0,0,0.5)';
+  pauseButton.style.border = '1px solid white';
+  pauseButton.style.borderRadius = '5px';
+  pauseButton.style.cursor = 'pointer';
+  pauseButton.style.display = 'none'; // Initially hidden until game starts
+  
+  pauseButton.addEventListener('click', togglePause);
+  
+  document.body.appendChild(pauseButton);
+}
+
+// Function to toggle pause state
+function togglePause() {
+  gamePaused = !gamePaused;
+  
+  // Update button appearance
+  const pauseButton = document.getElementById('pauseButton');
+  if (pauseButton) {
+    pauseButton.textContent = gamePaused ? '▶️' : '⏸️';
+  }
+  
+  // Show/hide pause overlay
+  let pauseOverlay = document.getElementById('pauseOverlay');
+  if (gamePaused) {
+    if (!pauseOverlay) {
+      pauseOverlay = document.createElement('div');
+      pauseOverlay.id = 'pauseOverlay';
+      pauseOverlay.style.position = 'absolute';
+      pauseOverlay.style.top = '0';
+      pauseOverlay.style.left = '0';
+      pauseOverlay.style.width = '100%';
+      pauseOverlay.style.height = '100%';
+      pauseOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+      pauseOverlay.style.display = 'flex';
+      pauseOverlay.style.justifyContent = 'center';
+      pauseOverlay.style.alignItems = 'center';
+      pauseOverlay.style.zIndex = '90';
+      
+      const pauseText = document.createElement('h2');
+      pauseText.textContent = 'GAME PAUSED';
+      pauseText.style.fontSize = '2em';
+      pauseText.style.color = 'white';
+      pauseOverlay.appendChild(pauseText);
+      
+      main.appendChild(pauseOverlay);
+    } else {
+      pauseOverlay.style.display = 'flex';
+    }
+  } else if (pauseOverlay) {
+    pauseOverlay.style.display = 'none';
+  }
+}
+
 // Call this function when the page loads
 createMuteButton();
+createPauseButton();
 
 // Update the initial maze generation
 let maze = generateRandomMaze(currentLevel);
 
 // Set up the main container for proper element positioning
 main.style.position = 'relative';
-main.style.width = '80vh';  // Match the CSS width
-main.style.height = '80vh'; // Match the CSS height
+main.style.width = '80vh';  
+main.style.height = '80vh'; 
 
 //Populates the maze in the HTML
 for (let i = 0; i < maze.length; i++) {
@@ -274,6 +338,10 @@ function startGame() {
   gameOver = false;
   
   startButton.style.display = "none";
+  document.getElementById('pauseButton').style.display = "block"; // Show pause button
+  
+  // Reset pause state
+  gamePaused = false;
 
   const player = document.querySelector("#player");
   const playerMouth = player.querySelector(".mouth");
@@ -329,6 +397,9 @@ function startGame() {
   
   // Move enemies on a separate interval (slightly slower than player)
   const enemyInterval = setInterval(function() {
+    // Skip update if game is paused
+    if (gamePaused) return;
+    
     // Move each enemy
     enemies.forEach(enemy => {
       // Store the current position
@@ -391,6 +462,9 @@ function startGame() {
               // Stop music
               stopMusic();
               
+              // Hide pause button
+              document.getElementById('pauseButton').style.display = "none";
+              
               setTimeout(() => {
                 // Ask to restart
                 if (confirm("Game Over! All lives lost. Restart current level?")) {
@@ -431,6 +505,9 @@ function startGame() {
   }, 300); // Enemies move slightly slower than player
   
   const gameInterval = setInterval(function () {
+    // Skip update if game is paused
+    if (gamePaused) return;
+    
     // Store previous position for collision detection
     let newRow = playerRow;
     let newCol = playerCol;
@@ -450,9 +527,7 @@ function startGame() {
     }
 
     // Check if new position is valid (not a wall)
-    if (newRow >= 0 && newRow < maze.length && 
-        newCol >= 0 && newCol < maze[0].length && 
-        maze[newRow][newCol] !== 1) {
+    if (maze?.[newRow]?.[newCol] !== 1) {
       
       // Check if player hit an enemy
       if (maze[newRow][newCol] === 3) {
@@ -485,6 +560,9 @@ function startGame() {
             
             // Stop music
             stopMusic();
+            
+            // Hide pause button
+            document.getElementById('pauseButton').style.display = "none";
             
             setTimeout(() => {
               // Ask to restart
@@ -708,6 +786,9 @@ function startGameWithState(currentScore, currentLives) {
   
   // Move enemies on a separate interval (slightly slower than player)
   const enemyInterval = setInterval(function() {
+    // Skip update if game is paused
+    if (gamePaused) return;
+    
     // Move each enemy
     enemies.forEach(enemy => {
       // Store the current position
@@ -767,6 +848,12 @@ function startGameWithState(currentScore, currentLives) {
               clearInterval(gameInterval);
               clearInterval(enemyInterval);
               
+              // Stop music
+              stopMusic();
+              
+              // Hide pause button
+              document.getElementById('pauseButton').style.display = "none";
+              
               setTimeout(() => {
                 // Ask to restart
                 if (confirm("Game Over! All lives lost. Restart current level?")) {
@@ -807,6 +894,9 @@ function startGameWithState(currentScore, currentLives) {
   }, 300); // Enemies move slightly slower than player
   
   const gameInterval = setInterval(function () {
+    // Skip update if game is paused
+    if (gamePaused) return;
+    
     // Store previous position for collision detection
     let newRow = playerRow;
     let newCol = playerCol;
@@ -858,6 +948,12 @@ function startGameWithState(currentScore, currentLives) {
             // Stop all game loops
             clearInterval(gameInterval);
             clearInterval(enemyInterval);
+            
+            // Stop music
+            stopMusic();
+            
+            // Hide pause button
+            document.getElementById('pauseButton').style.display = "none";
             
             setTimeout(() => {
               // Ask to restart
@@ -1150,6 +1246,11 @@ function keyDown(event) {
     leftPressed = true;
   } else if (event.key === "ArrowRight") {
     rightPressed = true;
+  } else if (event.key === "p" || event.key === "P") {
+    // Toggle pause when P key is pressed (only when game is in progress)
+    if (!gameOver && document.getElementById('pauseButton').style.display !== 'none') {
+      togglePause();
+    }
   }
 }
 

@@ -660,17 +660,3 @@ function isValidEnemyMove(newRow, newCol) {
          newCol >= 0 && newCol < maze[0].length && 
          maze[newRow][newCol] !== 1 && maze[newRow][newCol] !== 3;
 }
-
-// Main game update function
-function updateGame() {
-  if (gamePaused || gameOver) return;
-  
-  // Update player position
-  updatePlayer();
-  
-  // Update enemies
-  updateEnemies();
-  
-  // Check winning condition
-  checkLevelComplete();
-}

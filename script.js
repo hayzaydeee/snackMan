@@ -24,7 +24,6 @@ const musicTracks = [
 
 let musicMuted = false; // Add to global variables
 
-// Update the generateRandomMaze function to ensure all points are reachable
 
 function generateRandomMaze(level) {
   // Calculate enemy count - increases every 2 levels

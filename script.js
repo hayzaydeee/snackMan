@@ -23,6 +23,13 @@ let musicMuted = false; // Add to global variables
 
 const main = document.querySelector("main");
 
+// Global game state
+const gameState = {
+  score: 0,
+  lives: 3,
+  playerPosition: { row: 0, col: 0 }
+};
+
 function generateRandomMaze(level) {
   // Calculate enemy count - increases every 2 levels
   const enemyCount = Math.ceil(level / 2);
@@ -277,6 +284,34 @@ function togglePause() {
   }
 }
 
+// Function to initialize common game elements
+function initializeGameState(score = 0, lives = 3) {
+  // Reset game state
+  gameOver = false;
+  gamePaused = false;
+  pointsCollected = 0;
+  
+  // Show current level with an alert
+  alert(`Level ${currentLevel} - Get Ready!`);
+  
+  // Play music for the current level
+  playLevelMusic(currentLevel);
+  
+  // Update lives display
+  updateLivesDisplay(lives);
+  
+  // Show pause button
+  document.getElementById('pauseButton').style.display = "block";
+  
+  // Reset input states
+  upPressed = false;
+  downPressed = false;
+  leftPressed = false;
+  rightPressed = false;
+  
+  return { score, lives };
+}
+
 createMuteButton();
 createPauseButton();
 
@@ -332,53 +367,37 @@ for (let i = 0; i < maze.length; i++) {
 
 startButton = document.querySelector(".start");
 
+// Start new game from scratch
 function startGame() {
-  // Reset game over state at the beginning
-  gameOver = false;
-  
   startButton.style.display = "none";
-  document.getElementById('pauseButton').style.display = "block"; // Show pause button
   
-  // Reset pause state
-  gamePaused = false;
-
+  // Initialize game state with defaults
+  const gameState = initializeGameState();
+  
+  // Render the maze
+  renderMaze(maze);
+  
+  // Get player element and position
   const player = document.querySelector("#player");
   const playerMouth = player.querySelector(".mouth");
-  let score = 0;
-  let lives = 3; // Initialize with 3 lives
-  pointsCollected = 0; // Reset points collected
+  const playerPos = findPlayerPosition(maze);
   
-  // Show current level with an alert
-  alert(`Level ${currentLevel} - Get Ready!`);
-  
-  // Play music for the current level
-  playLevelMusic(currentLevel);
-  
-  // Update lives display
-  updateLivesDisplay(lives);
-  
-  // Get initial player position in the maze array
-  let playerRow, playerCol;
-  for (let i = 0; i < maze.length; i++) {
-    for (let j = 0; j < maze[i].length; j++) {
-      if (maze[i][j] === 2) {
-        playerRow = i;
-        playerCol = j;
-        break;
-      }
-    }
-  }
-  
-  // Find and track all enemy positions
-  const enemies = setupEnemies();
-  
-  // Create intervals using the shared functions
-  enemyInterval = createEnemyInterval(enemies, player, lives);
-  gameInterval = createGameInterval(playerRow, playerCol, player, playerMouth, score, lives);
+  // Setup game loops
+  setupGameLoops(player, playerMouth, playerPos.row, playerPos.col, gameState.score, gameState.lives);
+}
 
-  document.addEventListener("keydown", keyDown);
-  document.addEventListener("keyup", keyUp);
-  addButtonControls();
+// Start game with existing score and lives
+function startGameWithState(currentScore, currentLives) {
+  // Initialize game state with provided values
+  const gameState = initializeGameState(currentScore, currentLives);
+  
+  // Get player element and position
+  const player = document.querySelector("#player");
+  const playerMouth = player.querySelector(".mouth");
+  const playerPos = findPlayerPosition(maze);
+  
+  // Setup game loops
+  setupGameLoops(player, playerMouth, playerPos.row, playerPos.col, gameState.score, gameState.lives);
 }
 
 // Helper function to set up enemies
@@ -402,109 +421,8 @@ function setupEnemies() {
   return enemies;
 }
 
-// Add a new function to handle level progression
-function nextLevel(currentScore, currentLives) {
-  // Reset the game but keep score and lives
-  // Remove existing elements from main
-  main.innerHTML = "";
-  
-  // Generate a new maze for the next level
-  maze = generateRandomMaze(currentLevel);
-  
-  // Play music for the new level
-  playLevelMusic(currentLevel);
-  
-  // Reset input states
-  upPressed = false;
-  downPressed = false;
-  leftPressed = false;
-  rightPressed = false;
-  
-  // Remove event listeners
-  document.removeEventListener("keydown", keyDown);
-  document.removeEventListener("keyup", keyUp);
-  
-  // Rebuild the maze
-  for (let i = 0; i < maze.length; i++) {
-    for (let j = 0; j < maze[0].length; j++) {
-      let block = document.createElement("div");
-      block.classList.add("block");
-      
-      // Position each block absolutely within the grid
-      block.style.position = "absolute";
-      block.style.top = (i * (main.clientHeight / maze.length)) + "px";
-      block.style.left = (j * (main.clientWidth / maze[0].length)) + "px";
-      block.style.width = (main.clientWidth / maze[0].length) + "px";
-      block.style.height = (main.clientHeight / maze.length) + "px";
-      
-      switch (maze[i][j]) {
-        case 1:
-          block.classList.add("wall");
-          break;
-        case 2:
-          block.id = "player";
-          let mouth = document.createElement("div");
-          mouth.classList.add("mouth");
-          block.appendChild(mouth);
-          break;
-        case 3:
-          block.classList.add("enemy");
-          break;
-        default:
-          block.classList.add("point");
-          // Points should be smaller and centered in their cell
-          const pointSize = Math.min(main.clientHeight, main.clientWidth) / maze.length * 0.3;
-          block.style.height = pointSize + "px";
-          block.style.width = pointSize + "px";
-          block.style.borderRadius = "50%";
-          block.style.margin = "auto";
-          block.style.top = (i * (main.clientHeight / maze.length) + (main.clientHeight / maze.length - pointSize) / 2) + "px";
-          block.style.left = (j * (main.clientWidth / maze[0].length) + (main.clientWidth / maze[0].length - pointSize) / 2) + "px";
-      }
-      
-      main.appendChild(block);
-    }
-  }
-  
-  // Update score display with current score
-  document.querySelector('.score p').textContent = currentScore;
-  
-  // Start the game at the new level with current score and lives
-  startGameWithState(currentScore, currentLives);
-}
-
-// start game with existing score and lives
-function startGameWithState(currentScore, currentLives) {
-  // Reset game over state
-  gameOver = false;
-  
-  const player = document.querySelector("#player");
-  const playerMouth = player.querySelector(".mouth");
-  let score = currentScore;
-  let lives = currentLives;
-  pointsCollected = 0;
-  
-  // Update lives display
-  updateLivesDisplay(lives);
-  
-  // Show current level with an alert
-  alert(`Level ${currentLevel} - Get Ready!`);
-  
-  // Play music for the current level
-  playLevelMusic(currentLevel);
-  
-  // Get initial player position in the maze array
-  let playerRow, playerCol;
-  for (let i = 0; i < maze.length; i++) {
-    for (let j = 0; j < maze[i].length; j++) {
-      if (maze[i][j] === 2) {
-        playerRow = i;
-        playerCol = j;
-        break;
-      }
-    }
-  }
-  
+// Function to setup game loops and event handlers
+function setupGameLoops(player, playerMouth, playerRow, playerCol, score, lives) {
   // Find and track all enemy positions
   const enemies = setupEnemies();
   
@@ -512,9 +430,25 @@ function startGameWithState(currentScore, currentLives) {
   enemyInterval = createEnemyInterval(enemies, player, lives);
   gameInterval = createGameInterval(playerRow, playerCol, player, playerMouth, score, lives);
 
+  // Set up event handlers
   document.addEventListener("keydown", keyDown);
   document.addEventListener("keyup", keyUp);
   addButtonControls();
+}
+
+// Function to handle level progression
+function nextLevel(currentScore, currentLives) {
+  // Generate a new maze for the next level
+  maze = generateRandomMaze(currentLevel);
+  
+  // Render the new maze
+  renderMaze(maze);
+  
+  // Update score display with current score
+  document.querySelector('.score p').textContent = currentScore;
+  
+  // Start the game at the new level with current score and lives
+  startGameWithState(currentScore, currentLives);
 }
 
 // Helper function to handle player-enemy collision
@@ -641,4 +575,102 @@ function handleLevelComplete(score, lives) {
     alert(`Level ${currentLevel-1} Complete! Moving to Level ${currentLevel}`);
     nextLevel(score, lives);
   }, 500);
+}
+
+// Create a reusable function for maze rendering
+function renderMaze(maze) {
+  // Clear existing content
+  main.innerHTML = "";
+  
+  // Build the maze UI elements
+  for (let i = 0; i < maze.length; i++) {
+    for (let j = 0; j < maze[0].length; j++) {
+      let block = document.createElement("div");
+      block.classList.add("block");
+      
+      // Position each block absolutely within the grid
+      block.style.position = "absolute";
+      block.style.top = (i * (main.clientHeight / maze.length)) + "px";
+      block.style.left = (j * (main.clientWidth / maze[0].length)) + "px";
+      block.style.width = (main.clientWidth / maze[0].length) + "px";
+      block.style.height = (main.clientHeight / maze.length) + "px";
+      
+      switch (maze[i][j]) {
+        case 1:
+          block.classList.add("wall");
+          break;
+        case 2:
+          block.id = "player";
+          let mouth = document.createElement("div");
+          mouth.classList.add("mouth");
+          block.appendChild(mouth);
+          break;
+        case 3:
+          block.classList.add("enemy");
+          break;
+        default:
+          block.classList.add("point");
+          // Points should be smaller and centered in their cell
+          const pointSize = Math.min(main.clientHeight, main.clientWidth) / maze.length * 0.3;
+          block.style.height = pointSize + "px";
+          block.style.width = pointSize + "px";
+          block.style.borderRadius = "50%";
+          block.style.margin = "auto";
+          block.style.top = (i * (main.clientHeight / maze.length) + (main.clientHeight / maze.length - pointSize) / 2) + "px";
+          block.style.left = (j * (main.clientWidth / maze[0].length) + (main.clientWidth / maze[0].length - pointSize) / 2) + "px";
+      }
+      
+      main.appendChild(block);
+    }
+  }
+}
+
+// Helper function to find player position
+function findPlayerPosition(maze) {
+  for (let i = 0; i < maze.length; i++) {
+    for (let j = 0; j < maze[i].length; j++) {
+      if (maze[i][j] === 2) {
+        return { row: i, col: j };
+      }
+    }
+  }
+  return { row: -1, col: -1 }; // Error case
+}
+
+// Calculate new enemy position
+function calculateEnemyMove(enemy) {
+  // Store the current position
+  let newRow = enemy.row;
+  let newCol = enemy.col;
+  
+  // Determine new position based on current direction
+  switch (enemy.direction) {
+    case 'up': newRow--; break;
+    case 'down': newRow++; break;
+    case 'left': newCol--; break;
+    case 'right': newCol++; break;
+  }
+  
+  return { newRow, newCol };
+}
+
+// Check if position is valid for enemy movement
+function isValidEnemyMove(newRow, newCol) {
+  return newRow >= 0 && newRow < maze.length && 
+         newCol >= 0 && newCol < maze[0].length && 
+         maze[newRow][newCol] !== 1 && maze[newRow][newCol] !== 3;
+}
+
+// Main game update function
+function updateGame() {
+  if (gamePaused || gameOver) return;
+  
+  // Update player position
+  updatePlayer();
+  
+  // Update enemies
+  updateEnemies();
+  
+  // Check winning condition
+  checkLevelComplete();
 }
